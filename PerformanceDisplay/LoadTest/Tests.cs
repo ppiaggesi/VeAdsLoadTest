@@ -29,9 +29,6 @@ namespace LoadTest
             Dictionary<string, object> webTimings = Browser.Driver.WebTimings();
 
 
-
-            //  var avarage = total / LoadTest.Performance.Performance.PageFullyLoadedTotal.Count;
-            // int AvarageAdvertLoadTime = Convert.ToInt32(pageLoadTimes.PageConnectTime) / 100;
             if (webTimings.Count == 0)
             {
                 Assert.Fail();

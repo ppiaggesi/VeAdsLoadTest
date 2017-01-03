@@ -78,12 +78,6 @@
   <ItemGroup>
     <Compile Include="Advert.cs" />
     <Compile Include="Browser.cs" />
-    <Compile Include="Specflow\AdvertLoadTest.feature.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>AdvertLoadTest.feature</DependentUpon>
-    </Compile>
-    <Compile Include="Specflow\AdvertLoadTestSteps.cs" />
     <Compile Include="StepBase.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Performance\Performance.cs" />
@@ -98,10 +92,6 @@
     </None>
     <None Include="packages.config" />
     <None Include="runtests.cmd" />
-    <None Include="Specflow\AdvertLoadTest.feature">
-      <Generator>SpecFlowSingleFileGenerator</Generator>
-      <LastGenOutput>AdvertLoadTest.feature.cs</LastGenOutput>
-    </None>
     <None Include="SpecRunTestProfile.xsd">
       <SubType>Designer</SubType>
     </None>
