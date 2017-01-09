@@ -90,7 +90,7 @@ namespace DisplayWebPerformances
                 iterations.Add(new Iteration { Id = i + 1, Measures = measures, Resources = resources });
             }
 
-            File.WriteAllText("performances.log", JsonConvert.SerializeObject(iterations));
+            File.WriteAllText("performances.json", JsonConvert.SerializeObject(iterations));
             var summary =
 $@"number of Iterations={iterations.Count}
 average pageFullyLoaded={iterations.SelectMany(x => x.Measures.Where(y => y.Id == "pagefullyloaded")).Average(x => x.Value)}
