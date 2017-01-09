@@ -15,7 +15,7 @@ namespace DisplayWebPerformances
         static void Main(string[] args)
         {
             var iterations = new List<Iteration>();
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 2; i++)
             {
                 var options = new ChromeOptions();
                 options.AddArgument(@"--incognito");
@@ -91,6 +91,21 @@ namespace DisplayWebPerformances
             }
 
             File.WriteAllText("performances.log", JsonConvert.SerializeObject(iterations));
+            var summary =
+$@"number of Iterations={iterations.Count}
+average pageFullyLoaded={iterations.SelectMany(x => x.Measures.Where(y => y.Id == "pagefullyloaded")).Average(x => x.Value)}
+average pageAndAllResourcesLoaded={iterations.Average(x => x.EverythingLoadedTime)}
+
+---------------------------------------------------------------------------------------
+average load times per resource:
+";
+            foreach (var url in iterations.SelectMany(x => x.Resources).Select(x => x.Url).Distinct())
+            {
+                summary +=
+$@"{url} -> {iterations.SelectMany(x => x.Resources.Where(y => y.Url == url)).Average(x => x.Duration)}
+";
+            }
+            File.WriteAllText("summary.log", summary);
         }
 
         public static void WaitForAjaxComplete(int maxSeconds)
@@ -136,5 +151,14 @@ namespace DisplayWebPerformances
         public int Id { get; set; }
         public List<Measure> Measures { get; set; }
         public List<Resource> Resources { get; set; }
+
+        public double EverythingLoadedTime
+        {
+            get
+            {
+                var lastItemLoaded = Resources.OrderBy(x => x.StartTime).Last();
+                return lastItemLoaded.StartTime + lastItemLoaded.Duration;
+            }
+        }
     }
 }
