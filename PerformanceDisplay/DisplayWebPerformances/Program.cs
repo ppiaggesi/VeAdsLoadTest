@@ -11,88 +11,105 @@ namespace DisplayWebPerformances
 {
     class Program
     {
-        static IWebDriver driver;
         static void Main(string[] args)
         {
             var iterations = new List<Iteration>();
-            for (int i = 0; i < 2; i++)
+            var numExceptions = 0;
+            var numIteration = 1;
+            var numIterationsToRun = 2000;
+            var url = "https://veads-ci.veinteractive.net/iframe-performances.php?a=23832";
+
+            for (int numGoThroughCorrecyly = 0; numGoThroughCorrecyly < 2000;)
             {
-                var options = new ChromeOptions();
-                options.AddArgument(@"--incognito");
-                driver = new ChromeDriver(options);
-
-                driver.Navigate().GoToUrl("https://veads.vagrant.local/iframe-performances.php?a=1");
-                WaitForAjaxComplete(20);
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
-                wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
-                wait.Until(ExpectedConditions.ElementIsVisible(By.Id("veArrowRight")));
-
-                var resources = new List<Resource>();
-                var measures = new List<Measure>();
-
-                var performancesDiv = driver.FindElement(By.Id("performances"));
-                foreach (var perfElem in performancesDiv.FindElements(By.ClassName("resource")))
+                IWebDriver driver = null;
+                try
                 {
-                    var resourceId = perfElem.GetAttribute("id");
-                    var inputs = perfElem.FindElements(By.TagName("input"));
-                    var startTime = 0d;
-                    var duration = 0d;
-                    foreach (var input in inputs)
-                    {
-                        if (input.GetAttribute("name") == "startTime")
-                        {
-                            var startTimeText = input.GetAttribute("value");
-                            double.TryParse(startTimeText, out startTime);
-                        }
-                        else if (input.GetAttribute("name") == "duration")
-                        {
-                            var durationText = input.GetAttribute("value");
-                            double.TryParse(durationText, out duration);
-                        }
-                    }
+                    Console.WriteLine($"running iteration {numIteration++}, num OK={numGoThroughCorrecyly}, num KO={numExceptions}");
+                    var options = new ChromeOptions();
+                    options.AddArgument(@"--incognito");
+                    driver = new ChromeDriver(options);
+                    driver.Navigate().GoToUrl(url);
+                    WaitForAjaxComplete(5, driver);
+                    var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(5));
+                    wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
+                    wait.Until(ExpectedConditions.ElementIsVisible(By.Id("veArrowRight")));
 
-                    if (startTime > 0)
+                    var resources = new List<Resource>();
+                    var measures = new List<Measure>();
+
+                    var performancesDiv = driver.FindElement(By.Id("performances"));
+                    foreach (var perfElem in performancesDiv.FindElements(By.ClassName("resource")))
                     {
-                        resources.Add(new Resource { Url = resourceId, StartTime = startTime, Duration = duration });
-                    }
-                }
-                foreach (var measureElem in performancesDiv.FindElements(By.ClassName("measure")))
-                {
-                    var measureId = measureElem.GetAttribute("id");
-                    var inputs = measureElem.FindElements(By.TagName("input"));
-                    var value = 0d;
-                    foreach (var input in inputs)
-                    {
-                        if (input.GetAttribute("name") == "value")
+                        var resourceId = perfElem.GetAttribute("id");
+                        var inputs = perfElem.FindElements(By.TagName("input"));
+                        var startTime = 0d;
+                        var duration = 0d;
+                        foreach (var input in inputs)
                         {
-                            var valueText = input.GetAttribute("value");
-                            double.TryParse(valueText, out value);
+                            if (input.GetAttribute("name") == "startTime")
+                            {
+                                var startTimeText = input.GetAttribute("value");
+                                double.TryParse(startTimeText, out startTime);
+                            }
+                            else if (input.GetAttribute("name") == "duration")
+                            {
+                                var durationText = input.GetAttribute("value");
+                                double.TryParse(durationText, out duration);
+                            }
+                        }
+
+                        if (startTime > 0)
+                        {
+                            resources.Add(new Resource { Url = resourceId, StartTime = startTime, Duration = duration });
                         }
                     }
-
-                    if (value > 0)
+                    foreach (var measureElem in performancesDiv.FindElements(By.ClassName("measure")))
                     {
-                        measures.Add(new Measure { Id = measureId, Value = value });
+                        var measureId = measureElem.GetAttribute("id");
+                        var inputs = measureElem.FindElements(By.TagName("input"));
+                        var value = 0d;
+                        foreach (var input in inputs)
+                        {
+                            if (input.GetAttribute("name") == "value")
+                            {
+                                var valueText = input.GetAttribute("value");
+                                double.TryParse(valueText, out value);
+                            }
+                        }
+
+                        if (value > 0)
+                        {
+                            measures.Add(new Measure { Id = measureId, Value = value });
+                        }
                     }
-                }
 
-                foreach (var measure in measures)
+                    foreach (var measure in measures)
+                    {
+                        Console.WriteLine($"{measure.Id}={measure.Value}");
+                    }
+                    foreach (var resource in resources.OrderBy(x => x.StartTime))
+                    {
+                        Console.WriteLine($"{resource.Url} loaded in {resource.Duration}");
+                    }
+
+                    driver.Quit();
+
+                    iterations.Add(new Iteration { Id = numGoThroughCorrecyly + 1, Measures = measures, Resources = resources });
+                    numGoThroughCorrecyly++;
+                }
+                catch (Exception)
                 {
-                    Console.WriteLine($"{measure.Id}={measure.Value}");
+                    numExceptions++;
+                    if (driver != null)
+                        driver.Quit();
                 }
-                foreach (var resource in resources.OrderBy(x => x.StartTime))
-                {
-                    Console.WriteLine($"{resource.Url} loaded in {resource.Duration}");
-                }
-
-                driver.Quit();
-
-                iterations.Add(new Iteration { Id = i + 1, Measures = measures, Resources = resources });
             }
 
             File.WriteAllText("performances.json", JsonConvert.SerializeObject(iterations));
             var summary =
-$@"number of Iterations={iterations.Count}
+$@"number of Iterations={numIteration}
+number OK={numIterationsToRun}
+number KO={numExceptions};
 average pageFullyLoaded={iterations.SelectMany(x => x.Measures.Where(y => y.Id == "pagefullyloaded")).Average(x => x.Value)}
 average pageAndAllResourcesLoaded={iterations.Average(x => x.EverythingLoadedTime)}
 
@@ -108,7 +125,7 @@ $@"{url} -> {iterations.SelectMany(x => x.Resources.Where(y => y.Url == url)).Av
             File.WriteAllText("summary.log", summary);
         }
 
-        public static void WaitForAjaxComplete(int maxSeconds)
+        public static void WaitForAjaxComplete(int maxSeconds, IWebDriver driver)
         {
             try
             {
