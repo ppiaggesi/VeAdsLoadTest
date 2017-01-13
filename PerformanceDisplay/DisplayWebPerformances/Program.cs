@@ -17,7 +17,8 @@ namespace DisplayWebPerformances
             var numExceptions = 0;
             var numIteration = 1;
             var numIterationsToRun = 2000;
-            var url = "https://veads-ci.veinteractive.net/iframe-performances.php?a=23832";
+            var urlToTest = "https://veads-ci.veinteractive.net/iframe-performances.php?a=23832";
+            var waitPageToBeFullyLoadedTimeoutInSeconds = 10;
 
             for (int numGoThroughCorrecyly = 0; numGoThroughCorrecyly < 2000;)
             {
@@ -28,9 +29,9 @@ namespace DisplayWebPerformances
                     var options = new ChromeOptions();
                     options.AddArgument(@"--incognito");
                     driver = new ChromeDriver(options);
-                    driver.Navigate().GoToUrl(url);
-                    WaitForAjaxComplete(5, driver);
-                    var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(5));
+                    driver.Navigate().GoToUrl(urlToTest);
+                    WaitForAjaxComplete(waitPageToBeFullyLoadedTimeoutInSeconds, driver);
+                    var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(waitPageToBeFullyLoadedTimeoutInSeconds));
                     wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
                     wait.Until(ExpectedConditions.ElementIsVisible(By.Id("veArrowRight")));
 
